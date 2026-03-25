@@ -1,0 +1,32 @@
+{
+    "name": "Swift 6 Environment",
+    "image": "swift:6.2", 
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "swiftlang.swift-vscode",
+                "vadimcn.vscode-lldb", 
+                "editorconfig.editorconfig"
+            ],
+            "settings": {
+                "editor.formatOnSave": true,
+                "files.watcherExclude": {
+                    "**/.build/**": true,
+                    "**/.git/**": true
+                }
+            }
+        }
+    },
+    "forwardPorts": [
+        8080
+    ],
+    "postCreateCommand": "sudo chown -R vscode:vscode . && swift package resolve && echo 'Ready to code! Run `swift run` to start the server.'",
+    "remoteUser": "vscode",
+    "features": {
+        "ghcr.io/devcontainers/features/common-utils:2": {
+            "installZsh": "true",
+            "username": "vscode"
+        },
+        "ghcr.io/devcontainers/features/git:1": {}
+    }
+}
