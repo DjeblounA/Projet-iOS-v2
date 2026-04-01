@@ -1,7 +1,3 @@
-// Views.swift
-// Piano Sheet Music Library
-// All HTML is generated server-side in Swift.
-
 import Foundation
 
 // MARK: - Shared layout
@@ -32,6 +28,34 @@ func renderLayout(title: String, body: String) -> String {
         }
         nav.top-nav a { text-decoration: none; font-weight: 600; color: var(--pico-primary); }
         nav.top-nav .brand { font-size: 1.25rem; margin-right: auto; }
+        
+        /* Barre de recherche améliorée */
+        .search-bar { 
+          display: flex; 
+          flex-wrap: wrap; 
+          gap: 0.5rem; 
+          margin-bottom: 1.5rem; 
+          align-items: flex-start;
+        }
+        .search-bar input[type="search"] { 
+          flex: 2; 
+          min-width: 200px;
+          margin-bottom: 0; 
+        }
+        .search-bar select { 
+          flex: 1; 
+          min-width: 150px;
+          margin-bottom: 0;
+        }
+        .search-bar button { 
+          width: auto; 
+          margin-bottom: 0;
+          padding: 0 1.5rem;
+        }
+        .search-bar .clear-btn {
+          padding: 0 1rem;
+        }
+
         .badge {
           display: inline-block;
           padding: 0.15rem 0.55rem;
@@ -47,8 +71,6 @@ func renderLayout(title: String, body: String) -> String {
         table { width: 100%; }
         .actions form { display: inline; }
         .actions button { margin: 0 0.2rem; }
-        .search-bar { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; }
-        .search-bar input { flex: 1; }
       </style>
     </head>
     <body>
@@ -68,12 +90,39 @@ func renderLayout(title: String, body: String) -> String {
 // MARK: - Index page (list + search)
 
 /// Renders the main library page with all scores and a search bar.
-func renderIndex(scores: [Score], search: String = "") -> String {
+func renderIndex(scores: [Score], search: String = "", difficulty: String = "", genre: String = "") -> String {
+    
+    // Génération des options de filtre
+    let diffOptions = [""] + Difficulty.allCases.map { $0.rawValue }
+    let diffSelect = diffOptions.map { d in
+        let label = d.isEmpty ? "Toutes difficultés" : d
+        let selected = d == difficulty ? " selected" : ""
+        return "<option value='\(d)'\(selected)>\(label)</option>"
+    }.joined()
+
+    let genreOptions = [""] + Genre.allCases.map { $0.rawValue }
+    let genreSelect = genreOptions.map { g in
+        let label = g.isEmpty ? "Tous les genres" : g
+        let selected = g == genre ? " selected" : ""
+        return "<option value='\(g)'\(selected)>\(label)</option>"
+    }.joined()
+
     let searchBar = """
     <form method="get" action="/" class="search-bar">
-      <input type="search" name="search" placeholder="Rechercher par titre ou compositeur…" value="\(escapeHTML(search))">
+      <input type="search" name="search" placeholder="Titre, compositeur..." value="\(escapeHTML(search))">
+      
+      <select name="difficulty">
+        \(diffSelect)
+      </select>
+      
+      <select name="genre">
+        \(genreSelect)
+      </select>
+
       <button type="submit">Rechercher</button>
-      \(search.isEmpty ? "" : "<a href='/' role='button' class='secondary outline'>✕ Effacer</a>")
+      
+      \( (search.isEmpty && difficulty.isEmpty && genre.isEmpty) ? "" : 
+         "<a href='/' role='button' class='secondary outline clear-btn'>✕</a>" )
     </form>
     """
 
@@ -101,22 +150,24 @@ func renderIndex(scores: [Score], search: String = "") -> String {
     }
 
     let table = """
-    <table>
-      <thead>
-        <tr>
-          <th>Titre</th>
-          <th>Compositeur</th>
-          <th>Difficulté</th>
-          <th>Genre</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>\(rows)</tbody>
-    </table>
+    <div class="overflow-auto">
+        <table>
+          <thead>
+            <tr>
+              <th>Titre</th>
+              <th>Compositeur</th>
+              <th>Difficulté</th>
+              <th>Genre</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>\(rows)</tbody>
+        </table>
+    </div>
     """
 
     let body = """
-    <h1>Ma bibliothèque de partitions</h1>
+    <h1>Ma bibliothèque</h1>
     \(searchBar)
     \(table)
     <p style="margin-top:1.5rem">
