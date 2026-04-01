@@ -35,13 +35,24 @@ func setupDatabase() throws -> Connection {
 // MARK: - CRUD operations
 
 /// Returns all scores, optionally filtered by a search term (title or composer).
-func getAllScores(db: Connection, search: String? = nil) throws -> [Score] {
+// Dans Database.swift
+func getAllScores(db: Connection, search: String? = nil, difficulty: String? = nil, genre: String? = nil) throws -> [Score] {
     var query = scoresTable.order(colTitle.asc)
-
-    if let term = search, !term.trimmingCharacters(in: .whitespaces).isEmpty {
-        let filter = colTitle.like("%\(term)%") || colComposer.like("%\(term)%")
-        query = query.filter(filter)
+    
+    if let search = search {
+        query = query.filter(colTitle.like("%\(search)%") || colComposer.like("%\(search)%"))
     }
+    
+    if let difficulty = difficulty {
+        query = query.filter(colDifficulty == difficulty)
+    }
+    
+    if let genre = genre {
+        query = query.filter(colGenre == genre)
+    }
+    
+    return try db.prepare(query).map { try parseScore(row: $0) }
+}
 
     return try db.prepare(query).map { row in
         Score(
