@@ -30,7 +30,6 @@ struct Score: Codable, Sendable {
     var difficulty: Difficulty
     var genre: Genre
     var notes: String
-    var pdfPath: String?
 
     init(
         id: Int? = nil,
