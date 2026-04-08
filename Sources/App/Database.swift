@@ -45,6 +45,17 @@ func getAllScores(db: Connection, search: String? = nil, difficulty: String? = n
         let pattern = "%\(search)%"
         query = query.filter(colTitle.like(pattern) || colComposer.like(pattern))
     }
+    
+    if let difficulty = difficulty {
+        query = query.filter(colDifficulty == difficulty)
+    }
+    
+    if let genre = genre {
+        query = query.filter(colGenre == genre)
+    }
+    
+    return try db.prepare(query).map { try parseScore(row: $0) }
+}
 
     // Filtre par difficulté
     if let diff = difficulty, !diff.isEmpty {
