@@ -1,235 +1,225 @@
-// Views.swift
-// Piano Sheet Music Library
-// All HTML is generated server-side in Swift.
-
 import Foundation
 
 // MARK: - Shared layout
 
-/// Wraps any page body inside the common HTML shell with Pico CSS.
 func renderLayout(title: String, body: String) -> String {
-    """
-    <!DOCTYPE html>
-    <html lang="fr" data-theme="light">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title>\(title) — PianoLib</title>
-      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-      <style>
-        :root {
-          --pico-primary: #6246ea;
-          --pico-primary-hover: #4f35c7;
-        }
-        body { padding-bottom: 3rem; }
-        nav.top-nav {
-          display: flex;
-          align-items: center;
-          gap: 1.5rem;
-          padding: 1rem 0;
-          margin-bottom: 2rem;
-          border-bottom: 1px solid var(--pico-muted-border-color);
-        }
-        nav.top-nav a { text-decoration: none; font-weight: 600; color: var(--pico-primary); }
-        nav.top-nav .brand { font-size: 1.25rem; margin-right: auto; }
-        .badge {
+  """
+  <!DOCTYPE html>
+  <html lang="fr" data-theme="light">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>\(title) — PianoLib</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+      :root {
+        --pico-primary: #4361ee;
+        --pico-border-radius: 12px;
+      }
+      body { background-color: #f8f9fa; padding-bottom: 3rem; }
+      main { padding-top: 2rem; }
+      
+      .card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: var(--pico-border-radius);
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+        margin-bottom: 1.5rem;
+        border: 1px solid #e9ecef;
+      }
+
+      nav.container {
+        background: white;
+        margin-bottom: 2rem;
+        padding: 0 1rem;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        border-radius: 0 0 12px 12px;
+      }
+
+      .btn-delete {
+        background-color: #e63946;
+        border: none;
+        padding: 0.4rem 1rem;
+        font-size: 0.85rem;
+        width: auto !important;
+        display: inline-flex;
+        align-items: center;
+        margin: 0;
+      }
+      .btn-delete:hover { background-color: #d62828; }
+      
+      .score-meta { font-size: 0.9rem; color: #6c757d; }
+      
+      .badge {
           display: inline-block;
-          padding: 0.15rem 0.55rem;
-          border-radius: 999px;
+          padding: 0.2rem 0.6rem;
+          border-radius: 20px;
           font-size: 0.75rem;
-          font-weight: 600;
-          color: #fff;
-        }
-        .badge-green  { background: #2d9c5a; }
-        .badge-orange { background: #e07b00; }
-        .badge-red    { background: #d33f3f; }
-        .badge-purple { background: #7c3aed; }
-        table { width: 100%; }
-        .actions form { display: inline; }
-        .actions button { margin: 0 0.2rem; }
-        .search-bar { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; }
-        .search-bar input { flex: 1; }
-      </style>
-    </head>
-    <body>
-      <main class="container">
-        <nav class="top-nav">
-          <a href="/" class="brand">🎹 PianoLib</a>
-          <a href="/">Bibliothèque</a>
-          <a href="/score/new">Ajouter</a>
-        </nav>
-        \(body)
-      </main>
-    </body>
-    </html>
-    """
+          font-weight: bold;
+          background: #e9ecef;
+          color: #495057;
+      }
+      .badge-green  { background: #2d9c5a; color: white; }
+      .badge-orange { background: #e07b00; color: white; }
+      .badge-red    { background: #d33f3f; color: white; }
+      .badge-purple { background: #7c3aed; color: white; }
+    </style>
+  </head>
+  <body>
+    <nav class="container">
+      <ul>
+        <li><strong>🎹 PianoLib</strong></li>
+      </ul>
+      <ul>
+        <li><a href="/">Bibliothèque</a></li>
+        <li><a href="/score/new" class="outline">Ajouter</a></li>
+      </ul>
+    </nav>
+    <main class="container">
+      \(body)
+    </main>
+  </body>
+  </html>
+  """
 }
 
-// MARK: - Index page (list + search)
+// MARK: - Index page
 
-/// Renders the main library page with all scores and a search bar.
-func renderIndex(scores: [Score], search: String = "") -> String {
-    let searchBar = """
-    <form method="get" action="/" class="search-bar">
-      <input type="search" name="search" placeholder="Rechercher par titre ou compositeur…" value="\(escapeHTML(search))">
-      <button type="submit">Rechercher</button>
-      \(search.isEmpty ? "" : "<a href='/' role='button' class='secondary outline'>✕ Effacer</a>")
-    </form>
-    """
+func renderIndex(scores: [Score], search: String = "", difficulty: String = "", genre: String = "")
+  -> String
+{
+  let content =
+    scores.isEmpty
+    ? "<article class='card'><p style='text-align:center;margin:0;'>Aucune partition trouvée.</p></article>"
+    : scores.map { score in
+      """
+      <article class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                  <h4 style="margin:0">\(escapeHTML(score.title))</h4>
+                  <div class="score-meta">
+                      \(escapeHTML(score.composer)) • <span class="badge">\(score.genre.rawValue)</span>
+                  </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                  <span class="badge badge-\(score.difficultyColor)">\(score.difficulty.rawValue)</span>
+                  <a href="/score/\(score.id ?? 0)" role="button" class="outline secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; margin:0;">Détails</a>
+              </div>
+          </div>
+      </article>
+      """
+    }.joined()
 
-    let rows: String
-    if scores.isEmpty {
-        rows = "<tr><td colspan='5' style='text-align:center;color:var(--pico-muted-color)'>Aucune partition trouvée.</td></tr>"
-    } else {
-        rows = scores.map { s in
-            let id = s.id ?? 0
-            return """
-            <tr>
-              <td><a href="/score/\(id)">\(escapeHTML(s.title))</a></td>
-              <td>\(escapeHTML(s.composer))</td>
-              <td><span class="badge badge-\(s.difficultyColor)">\(s.difficulty.rawValue)</span></td>
-              <td>\(s.genre.rawValue)</td>
-              <td class="actions">
-                <a href="/score/\(id)" role="button" class="outline" style="padding:0.25rem 0.6rem;font-size:0.8rem">Détails</a>
-                <form method="post" action="/delete/\(id)" onsubmit="return confirm('Supprimer cette partition ?')">
-                  <button type="submit" class="secondary" style="padding:0.25rem 0.6rem;font-size:0.8rem">Supprimer</button>
-                </form>
-              </td>
-            </tr>
-            """
-        }.joined()
-    }
-
-    let table = """
-    <table>
-      <thead>
-        <tr>
-          <th>Titre</th>
-          <th>Compositeur</th>
-          <th>Difficulté</th>
-          <th>Genre</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>\(rows)</tbody>
-    </table>
-    """
-
-    let body = """
-    <h1>Ma bibliothèque de partitions</h1>
-    \(searchBar)
-    \(table)
-    <p style="margin-top:1.5rem">
-      <a href="/score/new" role="button">＋ Ajouter une partition</a>
-    </p>
-    """
-
-    return renderLayout(title: "Bibliothèque", body: body)
+  return renderLayout(
+    title: "Accueil",
+    body: """
+          <header style="margin-bottom: 2rem;">
+              <h2>Ma Bibliothèque</h2>
+              <form action="/" method="get" style="display: flex; gap: 10px; margin-bottom: 0;">
+                  <input type="search" name="search" placeholder="Rechercher..." value="\(escapeHTML(search))" style="margin-bottom:0;">
+                  <button type="submit" style="width: auto; margin-bottom:0;">Rechercher</button>
+              </form>
+          </header>
+          <section>
+              \(content)
+          </section>
+      """)
 }
 
-// MARK: - Detail / Edit page
+// MARK: - Detail page
 
-/// Renders the detail page for a single score, with an inline edit form.
 func renderDetail(score: Score, errorMessage: String? = nil) -> String {
-    let id = score.id ?? 0
-    let errorHTML = errorMessage.map {
-        "<div role='alert' style='color:var(--pico-del-color);margin-bottom:1rem'>⚠️ \(escapeHTML($0))</div>"
-    } ?? ""
+  let id = score.id ?? 0
+  let errorHTML = errorMessage.map { "<p style='color:#e63946;'>⚠️ \(escapeHTML($0))</p>" } ?? ""
 
-    let body = """
-    <a href="/">&larr; Retour à la bibliothèque</a>
-    <h2 style="margin-top:1rem">\(escapeHTML(score.title))</h2>
-    <p><small>\(escapeHTML(score.composer)) &middot; \(score.genre.rawValue)</small>
-       &nbsp;<span class="badge badge-\(score.difficultyColor)">\(score.difficulty.rawValue)</span></p>
-    <hr>
-    <h3>Modifier la partition</h3>
-    \(errorHTML)
-    <form method="post" action="/update/\(id)">
-      \(renderScoreFields(score: score))
-      <button type="submit">💾 Enregistrer les modifications</button>
-      <a href="/" role="button" class="secondary outline" style="margin-left:0.75rem">Annuler</a>
-    </form>
-    <hr>
-    <form method="post" action="/delete/\(id)" onsubmit="return confirm('Supprimer cette partition définitivement ?')">
-      <button type="submit" class="contrast">🗑 Supprimer cette partition</button>
-    </form>
-    """
+  let body = """
+    <nav aria-label="breadcrumb">
+      <ul>
+        <li><a href="/">Bibliothèque</a></li>
+        <li>\(escapeHTML(score.title))</li>
+      </ul>
+    </nav>
 
-    return renderLayout(title: escapeHTML(score.title), body: body)
-}
+    <div class="card">
+        <header style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem;">
+            <div>
+                <h1 style="margin-bottom: 0;">\(escapeHTML(score.title))</h1>
+                <p style="font-size: 1.2rem; color: #6c757d; margin:0;">\(escapeHTML(score.composer))</p>
+            </div>
+            <span class="badge badge-\(score.difficultyColor)" style="padding: 0.5rem 1rem;">
+                \(score.difficulty.rawValue)
+            </span>
+        </header>
 
-// MARK: - New score form
+        <hr>
+        
+        \(errorHTML)
 
-/// Renders the form for creating a new score.
-func renderNewForm(prefill: Score? = nil, errorMessage: String? = nil) -> String {
-    let empty = Score(title: "", composer: "", difficulty: .beginner, genre: .classical, notes: "")
-    let score = prefill ?? empty
-
-    let errorHTML = errorMessage.map {
-        "<div role='alert' style='color:var(--pico-del-color);margin-bottom:1rem'>⚠️ \(escapeHTML($0))</div>"
-    } ?? ""
-
-    let body = """
-    <a href="/">&larr; Retour à la bibliothèque</a>
-    <h2 style="margin-top:1rem">Ajouter une partition</h2>
-    \(errorHTML)
-    <form method="post" action="/create">
-      \(renderScoreFields(score: score))
-      <button type="submit">＋ Ajouter à la bibliothèque</button>
-    </form>
-    """
-
-    return renderLayout(title: "Nouvelle partition", body: body)
-}
-
-// MARK: - Reusable form fields
-
-/// Returns the shared form fields for both create and update forms.
-private func renderScoreFields(score: Score) -> String {
-    let difficultyOptions = Difficulty.allCases.map { d in
-        let selected = d == score.difficulty ? " selected" : ""
-        return "<option value='\(d.rawValue)'\(selected)>\(d.rawValue)</option>"
-    }.joined()
-
-    let genreOptions = Genre.allCases.map { g in
-        let selected = g == score.genre ? " selected" : ""
-        return "<option value='\(g.rawValue)'\(selected)>\(g.rawValue)</option>"
-    }.joined()
-
-    return """
-    <label>
-      Titre *
-      <input type="text" name="title" value="\(escapeHTML(score.title))" required placeholder="ex. Clair de Lune">
-    </label>
-    <label>
-      Compositeur *
-      <input type="text" name="composer" value="\(escapeHTML(score.composer))" required placeholder="ex. Claude Debussy">
-    </label>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
-      <label>
-        Difficulté
-        <select name="difficulty">\(difficultyOptions)</select>
-      </label>
-      <label>
-        Genre
-        <select name="genre">\(genreOptions)</select>
-      </label>
+        <form method="post" action="/update/\(id)">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <label>Titre <input type="text" name="title" value="\(escapeHTML(score.title))" required></label>
+                <label>Compositeur <input type="text" name="composer" value="\(escapeHTML(score.composer))" required></label>
+            </div>
+            <label>Notes <textarea name="notes" rows="4">\(escapeHTML(score.notes))</textarea></label>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem;">
+                <div style="display: flex; gap: 0.75rem;">
+                    <button type="submit" style="width: auto; margin:0;">💾 Enregistrer</button>
+                    <a href="/" role="button" class="secondary outline" style="width: auto; margin:0;">Annuler</a>
+                </div>
+            </div>
+        </form>
+        <hr>
+        <form action="/delete/\(id)" method="post" onsubmit="return confirm('Supprimer définitivement ?');" style="margin:0">
+            <button type="submit" class="btn-delete">🗑 Supprimer cette partition</button>
+        </form>
     </div>
-    <label>
-      Notes libres
-      <textarea name="notes" placeholder="Conseils d'interprétation, doigtés, édition recommandée…" rows="4">\(escapeHTML(score.notes))</textarea>
-    </label>
     """
+  return renderLayout(title: score.title, body: body)
+}
+
+// MARK: - New Score Form
+
+func renderNewForm(prefill: Score? = nil, errorMessage: String? = nil) -> String {
+  let score =
+    prefill ?? Score(title: "", composer: "", difficulty: .beginner, genre: .classical, notes: "")
+  let errorHTML = errorMessage.map { "<p style='color:#e63946;'>⚠️ \(escapeHTML($0))</p>" } ?? ""
+
+  let body = """
+    <h2>Ajouter une partition</h2>
+    <div class="card">
+        \(errorHTML)
+        <form method="post" action="/create">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <label>Titre <input type="text" name="title" value="\(escapeHTML(score.title))" required></label>
+                <label>Compositeur <input type="text" name="composer" value="\(escapeHTML(score.composer))" required></label>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <label>Difficulté
+                <select name="difficulty">
+                  \(Difficulty.allCases.map { "<option value='\($0.rawValue)' \($0 == score.difficulty ? "selected" : "")>\($0.rawValue)</option>" }.joined())
+                </select>
+              </label>
+              <label>Genre
+                <select name="genre">
+                  \(Genre.allCases.map { "<option value='\($0.rawValue)' \($0 == score.genre ? "selected" : "")>\($0.rawValue)</option>" }.joined())
+                </select>
+              </label>
+            </div>
+            <label>Notes <textarea name="notes" rows="3">\(escapeHTML(score.notes))</textarea></label>
+            <button type="submit" style="margin-top: 1rem;">＋ Ajouter à la bibliothèque</button>
+        </form>
+    </div>
+    """
+  return renderLayout(title: "Nouvelle partition", body: body)
 }
 
 // MARK: - Utility
 
-/// Escapes HTML special characters to prevent injection.
 func escapeHTML(_ string: String) -> String {
-    string
-        .replacingOccurrences(of: "&",  with: "&amp;")
-        .replacingOccurrences(of: "<",  with: "&lt;")
-        .replacingOccurrences(of: ">",  with: "&gt;")
-        .replacingOccurrences(of: "\"", with: "&quot;")
-        .replacingOccurrences(of: "'",  with: "&#39;")
+  string.replacingOccurrences(of: "&", with: "&amp;")
+    .replacingOccurrences(of: "<", with: "&lt;")
+    .replacingOccurrences(of: ">", with: "&gt;")
+    .replacingOccurrences(of: "\"", with: "&quot;")
+    .replacingOccurrences(of: "'", with: "&#39;")
 }

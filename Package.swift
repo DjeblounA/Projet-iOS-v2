@@ -5,7 +5,7 @@ let package = Package(
     name: "SwiftApp",
     platforms: [.macOS(.v14)],
     products: [
-        .executable(name: "App", targets: ["App"]),
+        .executable(name: "App", targets: ["App"])
     ],
     dependencies: [
         // Framework web Hummingbird 2
@@ -19,10 +19,7 @@ let package = Package(
             dependencies: [
                 .product(name: "Hummingbird", package: "hummingbird"),
                 .product(name: "SQLite", package: "SQLite.swift"),
-            ],
-            resources: [
-                .copy("Resources")
             ]
-        ),
+        )
     ]
 )
