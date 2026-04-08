@@ -1,11 +1,10 @@
 import Foundation
 import Hummingbird
 
-// MARK: - Database initialisation
-// L'ajout de nonisolated(unsafe) règle l'erreur de "main actor-isolated"
+// connexion à la base de données avec gestion de la concurrence swift 6
 nonisolated(unsafe) let db = try setupDatabase()
 
-// MARK: - Application setup
+// configuration et lancement de l'application
 let router = buildRouter()
 let app = Application(
     responder: router.buildResponder(),
@@ -14,96 +13,98 @@ let app = Application(
 
 try await app.runService()
 
-// MARK: - Router
-
+// définition des routes du serveur
 func buildRouter() -> Router<BasicRequestContext> {
     let router = Router(context: BasicRequestContext.self)
 
-    // ── GET / ── Liste des scores
+    // affichage de la bibliothèque avec prise en charge des filtres
     router.get("/") { request, context -> Response in
         let search = request.uri.queryParameters.get("search")
-        let scores = try getAllScores(db: db, search: search)
-        let html = renderIndex(scores: scores, search: search ?? "")
+        let difficulty = request.uri.queryParameters.get("difficulty")
+        let genre = request.uri.queryParameters.get("genre")
+        
+        let scores = try getAllScores(db: db, search: search, difficulty: difficulty, genre: genre)
+        let html = renderIndex(scores: scores, search: search ?? "", difficulty: difficulty ?? "", genre: genre ?? "")
+        
         return Response(
-            status: .ok, headers: [.contentType: "text/html; charset=utf-8"],
+            status: .ok, 
+            headers: [.contentType: "text/html; charset=utf-8"],
             body: .init(byteBuffer: .init(string: html)))
     }
 
-    // ── GET /score/new ── Formulaire
+    // affichage du formulaire de création
     router.get("/score/new") { _, _ -> Response in
         let html = renderNewForm()
         return Response(
-            status: .ok, headers: [.contentType: "text/html; charset=utf-8"],
+            status: .ok, 
+            headers: [.contentType: "text/html; charset=utf-8"],
             body: .init(byteBuffer: .init(string: html)))
     }
 
-    // ── GET /score/:id ── Détails
+    // consultation des détails d'une partition via son identifiant
     router.get("/score/:id") { request, context -> Response in
-        // CORRECTION ICI : on utilise context.parameters
         guard let idStr = context.parameters.get("id"),
-            let id = Int(idStr),
-            let score = try getScore(db: db, id: id)
+              let id = Int(idStr),
+              let score = try getScore(db: db, id: id)
         else {
-            return Response(
-                status: .notFound, body: .init(byteBuffer: .init(string: "Introuvable")))
+            return Response(status: .notFound, body: .init(byteBuffer: .init(string: "partition introuvable")))
         }
         let html = renderDetail(score: score)
         return Response(
-            status: .ok, headers: [.contentType: "text/html; charset=utf-8"],
+            status: .ok, 
+            headers: [.contentType: "text/html; charset=utf-8"],
             body: .init(byteBuffer: .init(string: html)))
     }
 
-    // ── POST /create ──
-router.post("/create") { request, context -> Response in
-    // On récupère le corps de la requête en texte brut
-    let bodyBuffer = try await request.body.collect(upTo: 1_048_576)
-    let bodyString = String(buffer: bodyBuffer)
-    
-    // On utilise ton helper pour transformer le texte en dictionnaire [String: String]
-    guard let params = parseFormBody(bodyString) else {
-        return Response(status: .badRequest)
+    // traitement de l'ajout d'une nouvelle partition
+    router.post("/create") { request, context -> Response in
+        let bodyBuffer = try await request.body.collect(upTo: 1_048_576)
+        let bodyString = String(buffer: bodyBuffer)
+        
+        guard let params = parseFormBody(bodyString) else {
+            return Response(status: .badRequest)
+        }
+
+        let score = Score(
+            id: nil,
+            title: params["title"] ?? "",
+            composer: params["composer"] ?? "",
+            difficulty: Difficulty(rawValue: params["difficulty"] ?? "") ?? .beginner,
+            genre: Genre(rawValue: params["genre"] ?? "") ?? .other,
+            notes: params["notes"] ?? ""
+        )
+        
+        try createScore(db: db, score: score)
+        return Response(status: .seeOther, headers: [.location: "/"])
     }
 
-    let score = Score(
-        id: nil,
-        title: params["title"] ?? "",
-        composer: params["composer"] ?? "",
-        difficulty: Difficulty(rawValue: params["difficulty"] ?? "") ?? .beginner,
-        genre: Genre(rawValue: params["genre"] ?? "") ?? .other,
-        notes: params["notes"] ?? ""
-    )
-    
-    try createScore(db: db, score: score)
-    return Response(status: .seeOther, headers: [.location: "/"])
-}
+    // enregistrement des modifications d'une partition existante
+    router.post("/update/:id") { request, context -> Response in
+        guard let idStr = context.parameters.get("id"), let id = Int(idStr) else {
+            return Response(status: .badRequest)
+        }
 
-// ── POST /update/:id ──
-router.post("/update/:id") { request, context -> Response in
-    guard let idStr = context.parameters.get("id"), let id = Int(idStr) else {
-        return Response(status: .badRequest)
+        let bodyBuffer = try await request.body.collect(upTo: 1_048_576)
+        let bodyString = String(buffer: bodyBuffer)
+        
+        guard let params = parseFormBody(bodyString) else {
+            return Response(status: .badRequest)
+        }
+
+        let updated = Score(
+            id: id,
+            title: params["title"] ?? "",
+            composer: params["composer"] ?? "",
+            difficulty: Difficulty(rawValue: params["difficulty"] ?? "") ?? .beginner,
+            genre: Genre(rawValue: params["genre"] ?? "") ?? .other,
+            notes: params["notes"] ?? ""
+        )
+
+        try updateScore(db: db, id: id, score: updated)
+        return Response(status: .seeOther, headers: [.location: "/score/\(id)"])
     }
 
-    let bodyBuffer = try await request.body.collect(upTo: 1_048_576)
-    let bodyString = String(buffer: bodyBuffer)
-    
-    guard let params = parseFormBody(bodyString) else {
-        return Response(status: .badRequest)
-    }
-
-    let updated = Score(
-        id: id,
-        title: params["title"] ?? "",
-        composer: params["composer"] ?? "",
-        difficulty: Difficulty(rawValue: params["difficulty"] ?? "") ?? .beginner,
-        genre: Genre(rawValue: params["genre"] ?? "") ?? .other,
-        notes: params["notes"] ?? ""
-    )
-
-    try updateScore(db: db, id: id, score: updated)
-    return Response(status: .seeOther, headers: [.location: "/score/\(id)"])
-}
-
-    // ── POST /delete/:id ──
+    // suppression d'une entrée de la base de données
     router.post("/delete/:id") { request, context -> Response in
         if let idStr = context.parameters.get("id"), let id = Int(idStr) {
             try deleteScore(db: db, id: id)
@@ -114,16 +115,14 @@ router.post("/update/:id") { request, context -> Response in
     return router
 }
 
-// Helper pour parser le corps du formulaire si request.decode n'est pas utilisé
+// utilitaire pour extraire les données des formulaires html
 func parseFormBody(_ body: String) -> [String: String]? {
     var result: [String: String] = [:]
     for pair in body.split(separator: "&") {
         let parts = pair.split(separator: "=", maxSplits: 1)
         guard parts.count == 2 else { continue }
-        let key =
-            String(parts[0]).removingPercentEncoding?.replacingOccurrences(of: "+", with: " ") ?? ""
-        let value =
-            String(parts[1]).removingPercentEncoding?.replacingOccurrences(of: "+", with: " ") ?? ""
+        let key = String(parts[0]).removingPercentEncoding?.replacingOccurrences(of: "+", with: " ") ?? ""
+        let value = String(parts[1]).removingPercentEncoding?.replacingOccurrences(of: "+", with: " ") ?? ""
         result[key] = value
     }
     return result.isEmpty ? nil : result
