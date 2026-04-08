@@ -27,14 +27,25 @@ func setupDatabase() throws -> Connection {
     return db
 }
 
-// récupération des partitions avec filtre de recherche
+// récupération des partitions avec filtres multiples
 func getAllScores(
     db: Connection, search: String? = nil, difficulty: String? = nil, genre: String? = nil
 ) throws -> [Score] {
     var query = scoresTable.order(colTitle.asc)
 
+    // filtre par texte (titre ou auteur)
     if let search = search, !search.isEmpty {
         query = query.filter(colTitle.like("%\(search)%") || colComposer.like("%\(search)%"))
+    }
+
+    // filtre par difficulté (si une valeur est sélectionnée et n'est pas vide)
+    if let difficulty = difficulty, !difficulty.isEmpty {
+        query = query.filter(colDifficulty == difficulty)
+    }
+
+    // filtre par genre musical
+    if let genre = genre, !genre.isEmpty {
+        query = query.filter(colGenre == genre)
     }
 
     return try db.prepare(query).map { row in

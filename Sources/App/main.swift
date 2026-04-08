@@ -18,19 +18,23 @@ func buildRouter() -> Router<BasicRequestContext> {
     let router = Router(context: BasicRequestContext.self)
 
     // affichage de la bibliothèque avec prise en charge des filtres
-    router.get("/") { request, context -> Response in
-        let search = request.uri.queryParameters.get("search")
-        let difficulty = request.uri.queryParameters.get("difficulty")
-        let genre = request.uri.queryParameters.get("genre")
-        
-        let scores = try getAllScores(db: db, search: search, difficulty: difficulty, genre: genre)
-        let html = renderIndex(scores: scores, search: search ?? "", difficulty: difficulty ?? "", genre: genre ?? "")
-        
-        return Response(
-            status: .ok, 
-            headers: [.contentType: "text/html; charset=utf-8"],
-            body: .init(byteBuffer: .init(string: html)))
-    }
+router.get("/") { request, context -> Response in
+    // on récupère les filtres depuis l'URL (?search=...&difficulty=...&genre=...)
+    let search = request.uri.queryParameters.get("search")
+    let difficulty = request.uri.queryParameters.get("difficulty")
+    let genre = request.uri.queryParameters.get("genre")
+    
+    // on passe TOUS les paramètres à la fonction de base de données
+    let scores = try getAllScores(db: db, search: search, difficulty: difficulty, genre: genre)
+    
+    // on renvoie les valeurs à la vue pour que les menus déroulants restent sélectionnés
+    let html = renderIndex(scores: scores, search: search ?? "", difficulty: difficulty ?? "", genre: genre ?? "")
+    
+    return Response(
+        status: .ok, 
+        headers: [.contentType: "text/html; charset=utf-8"],
+        body: .init(byteBuffer: .init(string: html)))
+}
 
     // affichage du formulaire de création
     router.get("/score/new") { _, _ -> Response in
