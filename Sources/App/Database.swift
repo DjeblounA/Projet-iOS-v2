@@ -1,128 +1,107 @@
 // Database.swift
 // Piano Sheet Music Library
-// SQLite operations
 
-import SQLite
 import Foundation
+import SQLite
 
-// MARK: - Schema Definition
-
+// MARK: - Table & Column definitions
 let scoresTable = Table("scores")
-let colId         = Expression<Int>("id")
-let colTitle      = Expression<String>("title")
-let colComposer   = Expression<String>("composer")
+
+let colId = Expression<Int>("id")
+let colTitle = Expression<String>("title")
+let colComposer = Expression<String>("composer")
 let colDifficulty = Expression<String>("difficulty")
-let colGenre      = Expression<String>("genre")
-let colNotes      = Expression<String>("notes")
+let colGenre = Expression<String>("genre")
+let colNotes = Expression<String>("notes")
 
-// MARK: - Setup
+// MARK: - Database setup
 
-/// Initialises the SQLite database and creates the table if it doesn't exist.
+/// Opens (or creates) the SQLite database and creates the scores table if needed.
 func setupDatabase() throws -> Connection {
-    // Crée le fichier db.sqlite s'il n'existe pas
-    let db = try Connection("db.sqlite")
+    let db = try Connection("scores.sqlite3")
 
-    try db.run(scoresTable.create(ifNotExists: true) { t in
-        t.column(colId, primaryKey: .autoincrement)
-        t.column(colTitle)
-        t.column(colComposer)
-        t.column(colDifficulty)
-        t.column(colGenre)
-        t.column(colNotes)
-    })
+    try db.run(
+        scoresTable.create(ifNotExists: true) { t in
+            t.column(colId, primaryKey: .autoincrement)
+            t.column(colTitle)
+            t.column(colComposer)
+            t.column(colDifficulty)
+            t.column(colGenre)
+            t.column(colNotes)
+        })
 
     return db
 }
 
-// MARK: - CRUD Operations
+// MARK: - CRUD operations
 
-/// Returns all scores, optionally filtered by search term, difficulty, and genre.
-func getAllScores(db: Connection, search: String? = nil, difficulty: String? = nil, genre: String? = nil) throws -> [Score] {
+/// Returns all scores, optionally filtered by a search term (title or composer).
+// Dans Database.swift
+func getAllScores(
+    db: Connection, search: String? = nil, difficulty: String? = nil, genre: String? = nil
+) throws -> [Score] {
     var query = scoresTable.order(colTitle.asc)
 
-    // Filtre par texte (Titre ou Compositeur)
-    if let search = search {
-        let pattern = "%\(search)%"
-        query = query.filter(colTitle.like(pattern) || colComposer.like(pattern))
-    }
-    
-    if let difficulty = difficulty {
-        query = query.filter(colDifficulty == difficulty)
-    }
-    
-    if let genre = genre {
-        query = query.filter(colGenre == genre)
-    }
-    
-    return try db.prepare(query).map { try parseScore(row: $0) }
-}
-
-    // Filtre par difficulté
-    if let diff = difficulty, !diff.isEmpty {
-        query = query.filter(colDifficulty == diff)
+    // Application des filtres si présents
+    if let search = search, !search.isEmpty {
+        query = query.filter(colTitle.like("%\(search)%") || colComposer.like("%\(search)%"))
     }
 
-    // Filtre par genre
-    if let gen = genre, !gen.isEmpty {
-        query = query.filter(colGenre == gen)
-    }
-
-    // Exécution et transformation en objets Score
+    // On exécute la requête et on transforme chaque ligne en objet Score
     return try db.prepare(query).map { row in
         Score(
-            id:         row[colId],
-            title:      row[colTitle],
-            composer:   row[colComposer],
+            id: row[colId],
+            title: row[colTitle],
+            composer: row[colComposer],
             difficulty: Difficulty(rawValue: row[colDifficulty]) ?? .beginner,
-            genre:      Genre(rawValue: row[colGenre]) ?? .other,
-            notes:      row[colNotes]
+            genre: Genre(rawValue: row[colGenre]) ?? .other,
+            notes: row[colNotes]
         )
     }
 }
-
-/// Fetches a single score by its ID.
+/// Returns a single score by its id, or nil if not found.
 func getScore(db: Connection, id: Int) throws -> Score? {
     let query = scoresTable.filter(colId == id)
-    if let row = try db.pluck(query) {
-        return Score(
-            id:         row[colId],
-            title:      row[colTitle],
-            composer:   row[colComposer],
+    return try db.prepare(query).map { row in
+        Score(
+            id: row[colId],
+            title: row[colTitle],
+            composer: row[colComposer],
             difficulty: Difficulty(rawValue: row[colDifficulty]) ?? .beginner,
-            genre:      Genre(rawValue: row[colGenre]) ?? .other,
-            notes:      row[colNotes]
+            genre: Genre(rawValue: row[colGenre]) ?? .other,
+            notes: row[colNotes]
         )
-    }
-    return nil
+    }.first
 }
 
-/// Inserts a new score into the database.
-func createScore(db: Connection, score: Score) throws {
+/// Inserts a new score and returns its new id.
+@discardableResult
+func createScore(db: Connection, score: Score) throws -> Int64 {
     let insert = scoresTable.insert(
-        colTitle      <- score.title,
-        colComposer   <- score.composer,
+        colTitle <- score.title,
+        colComposer <- score.composer,
         colDifficulty <- score.difficulty.rawValue,
-        colGenre      <- score.genre.rawValue,
-        colNotes      <- score.notes
+        colGenre <- score.genre.rawValue,
+        colNotes <- score.notes
     )
-    try db.run(insert)
+    return try db.run(insert)
 }
 
-/// Updates an existing score.
+/// Updates an existing score identified by its id.
 func updateScore(db: Connection, id: Int, score: Score) throws {
-    let target = scoresTable.filter(colId == id)
-    let update = target.update(
-        colTitle      <- score.title,
-        colComposer   <- score.composer,
-        colDifficulty <- score.difficulty.rawValue,
-        colGenre      <- score.genre.rawValue,
-        colNotes      <- score.notes
-    )
-    try db.run(update)
+    let row = scoresTable.filter(colId == id)
+    try db.run(
+        row.update(
+            colTitle <- score.title,
+            colComposer <- score.composer,
+            colDifficulty <- score.difficulty.rawValue,
+            colGenre <- score.genre.rawValue,
+            colNotes <- score.notes
+        ))
 }
 
-/// Deletes a score from the database.
+/// Deletes a score by its id.
 func deleteScore(db: Connection, id: Int) throws {
-    let target = scoresTable.filter(colId == id)
-    try db.run(target.delete())
+    let row = scoresTable.filter(colId == id)
+    try db.run(row.delete())
 }
