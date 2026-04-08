@@ -1,45 +1,61 @@
-# Swift Development Course Template
+# 🎹 PianoLib — Bibliothèque de partitions pour piano
 
-Welcome, Students!
 
-This repository is your starting point for the Swift / iOS Development course. It is pre-configured to run a full Swift environment in the cloud (GitHub Codespaces), allowing you to build Swift applications—including UI apps—without needing a Mac.
+## Présentation
 
-## 🚀 Quick Start
+PianoLib est une application web CRUD développée intégralement en Swift côté serveur. Elle permet de gérer une bibliothèque personnelle de partitions pour piano : ajouter, consulter, modifier, supprimer et rechercher des partitions.
 
-Do not clone this directly. Follow these steps to set up your personal workspace:
+---
 
-#### 1. Create your Repo:
-1. Click the green "Use this template" button at the top right of this page.
-2. Select "Create a new repository".
-3. Name it according to the assignment instructions (e.g., assignment-1-yourname).
+## Fonctionnalités
 
-#### 2. Launch the Environment:
-Once your new repository is created:
-1. click the green <> Code button.
-2. Switch to the Codespaces tab.
-3. Click "Create codespace on main".
+- Lister toutes les partitions de la bibliothèque
+- Ajouter une nouvelle partition via un formulaire
+- Rechercher par titre ou compositeur
+- Consulter la page de détails d'une partition
+- Modifier une partition existante
+- Supprimer une partition
+- Validation des champs obligatoires côté serveur avec messages d'erreur
 
-Wait about 2-3 minutes. GitHub is building a Linux container with Swift 6.2 and all necessary VS Code extensions pre-installed for you.
+---
 
-## 🛠 What's Included?
-- **Swift 6 Toolchain:** The latest stable version of the swift language and build tools.
+## Modèle de données
 
-## 💻 How to Run Your Code
+Chaque partition (`Score`) contient les champs suivants :
 
-#### Running Logic & Console Apps
+| Champ | Type | Description |
+|-------|------|-------------|
+| `id` | Int (auto) | Identifiant unique auto-incrémenté |
+| `title` | String | Titre du morceau |
+| `composer` | String | Nom du compositeur |
+| `difficulty` | Enum | Débutant · Intermédiaire · Avancé · Virtuose |
+| `genre` | Enum | Classique · Jazz · Pop · Romantique · Baroque · Moderne · Autre |
+| `notes` | String | Remarques libres (doigtés, conseils, édition…) |
 
-For pure logic libraries or backend tasks:
+---
+
+## Structure du projet
 
 ```
-# Run the main executable
-swift run
-
-# Run unit tests
-swift test
+Sources/App/
+├── main.swift       — Déclaration des routes et logique des handlers
+├── Models.swift     — Struct Score, enums Difficulty et Genre
+├── Database.swift   — Connexion SQLite et fonctions CRUD
+└── Views.swift      — Génération HTML côté serveur
 ```
 
-## 📂 Project Structure
-Sources/: Your Swift source code lives here.
-Tests/: Unit tests go here.
-Package.swift: The dependency manager file. Do not modify this unless instructed to add a new library.
+---
+
+## Lancer l'application
+
+```bash
+# Dans le terminal GitHub Codespaces :
+chmod +x build.sh run.sh   # uniquement au premier lancement
+./build.sh                  # compile le projet
+./run.sh                    # démarre le serveur sur le port 8080
+```
+
+Une fois lancé, ouvrez l'onglet **Ports** dans Codespaces et cliquez sur le lien du port **8080** pour accéder à l'application.
+
+---
 
