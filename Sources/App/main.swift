@@ -54,59 +54,54 @@ func buildRouter() -> Router<BasicRequestContext> {
     }
 
     // ── POST /create ──
-    router.post("/create") { request, context -> Response in
-        // Utilisation du décodeur intégré pour les formulaires standard
-        struct CreateScoreRequest: Decodable {
-            let title: String
-            let composer: String
-            let notes: String
-            let difficulty: String
-            let genre: String
-        }
-
-        let input = try await request.decode(as: CreateScoreRequest.self, context: context)
-        let score = Score(
-            id: nil,
-            title: input.title,
-            composer: input.composer,
-            difficulty: Difficulty(rawValue: input.difficulty) ?? .beginner,
-            genre: Genre(rawValue: input.genre) ?? .other,
-            notes: input.notes
-        )
-        try createScore(db: db, score: score)
-        return Response(status: .seeOther, headers: [.location: "/"])
+router.post("/create") { request, context -> Response in
+    // On récupère le corps de la requête en texte brut
+    let bodyBuffer = try await request.body.collect(upTo: 1_048_576)
+    let bodyString = String(buffer: bodyBuffer)
+    
+    // On utilise ton helper pour transformer le texte en dictionnaire [String: String]
+    guard let params = parseFormBody(bodyString) else {
+        return Response(status: .badRequest)
     }
 
-    // ── POST /update/:id ──
-    router.post("/update/:id") { request, context -> Response in
-        guard let idStr = context.parameters.get("id"), let id = Int(idStr) else {
-            return Response(status: .badRequest)
-        }
+    let score = Score(
+        id: nil,
+        title: params["title"] ?? "",
+        composer: params["composer"] ?? "",
+        difficulty: Difficulty(rawValue: params["difficulty"] ?? "") ?? .beginner,
+        genre: Genre(rawValue: params["genre"] ?? "") ?? .other,
+        notes: params["notes"] ?? ""
+    )
+    
+    try createScore(db: db, score: score)
+    return Response(status: .seeOther, headers: [.location: "/"])
+}
 
-        // On définit une structure locale pour le formulaire
-        struct UpdateForm: Decodable {
-            let title: String
-            let composer: String
-            let notes: String
-            let difficulty: String
-            let genre: String
-        }
-
-        // HB2 gère le "collectBody" en interne lors du decode
-        let input = try await request.decode(as: UpdateForm.self, context: context)
-
-        let updated = Score(
-            id: id,
-            title: input.title,
-            composer: input.composer,
-            difficulty: Difficulty(rawValue: input.difficulty) ?? .beginner,
-            genre: Genre(rawValue: input.genre) ?? .other,
-            notes: input.notes
-        )
-
-        try updateScore(db: db, id: id, score: updated)
-        return Response(status: .seeOther, headers: [.location: "/score/\(id)"])
+// ── POST /update/:id ──
+router.post("/update/:id") { request, context -> Response in
+    guard let idStr = context.parameters.get("id"), let id = Int(idStr) else {
+        return Response(status: .badRequest)
     }
+
+    let bodyBuffer = try await request.body.collect(upTo: 1_048_576)
+    let bodyString = String(buffer: bodyBuffer)
+    
+    guard let params = parseFormBody(bodyString) else {
+        return Response(status: .badRequest)
+    }
+
+    let updated = Score(
+        id: id,
+        title: params["title"] ?? "",
+        composer: params["composer"] ?? "",
+        difficulty: Difficulty(rawValue: params["difficulty"] ?? "") ?? .beginner,
+        genre: Genre(rawValue: params["genre"] ?? "") ?? .other,
+        notes: params["notes"] ?? ""
+    )
+
+    try updateScore(db: db, id: id, score: updated)
+    return Response(status: .seeOther, headers: [.location: "/score/\(id)"])
+}
 
     // ── POST /delete/:id ──
     router.post("/delete/:id") { request, context -> Response in

@@ -1,9 +1,6 @@
-// Models.swift
-// Piano Sheet Music Library
-
 import Foundation
 
-/// Difficulty levels for a piano piece
+// les niveaux de difficulté pour les partitions
 enum Difficulty: String, Codable, CaseIterable, Sendable {
     case beginner = "Débutant"
     case intermediate = "Intermédiaire"
@@ -11,7 +8,7 @@ enum Difficulty: String, Codable, CaseIterable, Sendable {
     case virtuoso = "Virtuose"
 }
 
-/// Genre of a piano piece
+// les genres pour classer la bibliothèque
 enum Genre: String, Codable, CaseIterable, Sendable {
     case classical = "Classique"
     case jazz = "Jazz"
@@ -22,7 +19,7 @@ enum Genre: String, Codable, CaseIterable, Sendable {
     case other = "Autre"
 }
 
-/// Represents a piano sheet music entry in the library
+// structure de l'objet partition stocké en base
 struct Score: Codable, Sendable {
     var id: Int?
     var title: String
@@ -30,6 +27,7 @@ struct Score: Codable, Sendable {
     var difficulty: Difficulty
     var genre: Genre
     var notes: String
+    var pdfPath: String?
 
     init(
         id: Int? = nil,
@@ -48,14 +46,13 @@ struct Score: Codable, Sendable {
     }
 }
 
-// MARK: - Extension: Display helpers
 extension Score {
-    /// A short human-readable summary of the score
+    // résumé pour l'affichage rapide
     var summary: String {
         "\(title) — \(composer) (\(difficulty.rawValue), \(genre.rawValue))"
     }
 
-    /// Badge color class for difficulty (used in HTML views)
+    // gestion des couleurs des badges selon la difficulté
     var difficultyColor: String {
         switch difficulty {
         case .beginner: return "green"
